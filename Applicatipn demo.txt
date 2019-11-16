@@ -1,0 +1,325 @@
+
+
+all controller class---------------------------
+
+package com.infosys.infysuredemo.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.infosys.infysuredemo.entity.Beneficiary;
+import com.infosys.infysuredemo.entity.Relationship;
+import com.infosys.infysuredemo.model.UpdateAllocationModel;
+import com.infosys.infysuredemo.service.BeneficiaryService;
+import com.infosys.infysuredemo.service.RelationshipService;
+
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RestController
+@RequestMapping("/beneficiary-service")
+public class BeneficiaryController {
+	
+	@Autowired
+	RelationshipService relationshipService;
+	
+	@Autowired
+	BeneficiaryService beneficiaryService;
+	
+	@GetMapping("/relationships")
+	public List<Relationship> getAllRelationships() {
+		return relationshipService.getAllRelationships();
+	}
+	
+	@PostMapping("/beneficiaries")
+	public List<Beneficiary> addBeneficiaries(@RequestBody List<Beneficiary> beneficiaries) {
+		beneficiaryService.addBeneficiaries(beneficiaries);
+		return beneficiaries;
+	}
+	
+	@GetMapping("/beneficiaries/user/{userId}")
+	public List<Beneficiary> getAllBeneficiariesByUserId(@PathVariable int userId) {
+		return beneficiaryService.getAllBeneficiariesByUserId(userId);
+	}
+
+	@PutMapping("/beneficiaries/allocation")
+	public boolean updateBeneficiaryAllocation(@RequestBody List<UpdateAllocationModel> updateAllocationModels) {
+		for (UpdateAllocationModel updateAllocationModel : updateAllocationModels) {
+			beneficiaryService.updateBeneficiaryAllocation(updateAllocationModel);
+		}
+		return true;
+	}
+
+
+}
+
+
+
+------------------------+++++++++++++++++++++++++++++----UserDAO------------------------------------------------------
+
+package com.infosys.infysuredemo.dao;
+
+import java.util.List;
+
+import com.infosys.infysuredemo.entity.User;
+
+public interface UserDAO {
+	
+	public List<User> getAllUsers();
+	
+	public User getUserByEmail(String email);
+	
+	public User getUserById(int id);
+	
+	public void saveUser(User user);
+	
+	public List<Integer> getSecurityQuestionsByEmail(String email);
+
+}
+
+
+------------------------------userDaoIMPL--------------------------------------------------
+
+package com.infosys.infysuredemo.dao;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
+import org.hibernate.Session;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.infosys.infysuredemo.entity.User;
+import com.infosys.infysuredemo.entity.UserQuestion;
+
+@Repository
+public class UserDAOImpl implements UserDAO {
+	
+	@Autowired
+	private EntityManager entityManager;
+	
+	@Override
+	public List<User> getAllUsers() {
+		Session currentSession = entityManager.unwrap(Session.class);
+		// Native Hibernate API
+		Query query = currentSession.createQuery("from User", User.class);
+		List<User> userEntities = query.getResultList();
+		return userEntities;
+	}
+
+	@Override
+	public User getUserByEmail(String email) {
+		Session currentSession = entityManager.unwrap(Session.class);
+		Query query = currentSession.createQuery("from User where email = :email");
+		query.setParameter("email", email);
+		if(query.getResultList().size() > 0) {
+			return (User) query.getResultList().get(0);		
+		}
+		return null;
+	}
+
+	@Override
+	public void saveUser(User user) {
+		Session currentSession = entityManager.unwrap(Session.class);
+		currentSession.saveOrUpdate(user);
+	}
+
+	@Override
+	public List<Integer> getSecurityQuestionsByEmail(String email) {
+		User user = new User();
+		UserQuestion userQuestion = new UserQuestion();
+		List<Integer> securityQuestionIds = new ArrayList<>();
+		Session currentSession = entityManager.unwrap(Session.class);
+		Query query = currentSession.createQuery("from User where email = :email");
+		query.setParameter("email", email);
+		if(query.getResultList().size() == 0) return null;
+		user = (User) query.getResultList().get(0);
+		query = currentSession.createQuery("from UserQuestion where userId = :userid");
+		query.setParameter("userid", user.getId());
+		if(query.getResultList().size() == 0) return null;
+		for(int i = 0; i < query.getResultList().size(); i++) {
+			userQuestion = (UserQuestion) query.getResultList().get(i);
+			securityQuestionIds.add(userQuestion.getQuestionId());
+		}
+		return securityQuestionIds;
+	}
+
+	@Override
+	public User getUserById(int id) {
+		Session currentSession = entityManager.unwrap(Session.class);
+		Query query = currentSession.createQuery("from User where id = :userId");
+		query.setParameter("userId", id);
+		if(query.getResultList().size() > 0) {
+			return (User) query.getResultList().get(0);		
+		}
+		return null;
+	}
+
+}
+
+
+-------------------------------model class which converts Entity to model and vice versa----------------------------------------
+
+package com.infosys.infysuredemo.model;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+
+import com.infosys.infysuredemo.entity.User;
+import com.infosys.infysuredemo.entity.UserProfile;
+
+public class UserProfileModel {
+	public class UserModel {
+		private int id;
+		private String firstName;
+		private String lastName;
+
+		public int getId() {
+			return id;
+		}
+
+		public void setId(int id) {
+			this.id = id;
+		}
+
+		public String getFirstName() {
+			return firstName;
+		}
+
+		public void setFirstName(String firstName) {
+			this.firstName = firstName;
+		}
+
+		public String getLastName() {
+			return lastName;
+		}
+
+		public void setLastName(String lastName) {
+			this.lastName = lastName;
+		}
+
+		public User toEntity() {
+			User userEntity = new User();
+			userEntity.setId(this.getId());
+			userEntity.setFirstName(this.getFirstName());
+			userEntity.setLastName(this.getLastName());
+			return userEntity;
+		}
+
+		public UserModel fromEntity(User user) {
+			UserModel userModel = new UserModel();
+			userModel.setId(user.getId());
+			userModel.setFirstName(user.getFirstName());
+			userModel.setLastName(user.getLastName());
+			return userModel;
+		}
+
+	}
+
+	private int profile_id;
+	private Date dob;
+	private UserModel user;
+	private String address;
+	private String zip;
+	private String city;
+	private String country;
+
+	public UserProfileModel() {
+		// TODO Auto-generated constructor stub
+	}
+
+	public int getProfile_id() {
+		return profile_id;
+	}
+
+	public void setProfile_id(int profile_id) {
+		this.profile_id = profile_id;
+	}
+
+	public UserModel getUser() {
+		return user;
+	}
+
+	public void setUser(UserModel user) {
+		this.user = user;
+	}
+
+	public Date getDob() {
+		return dob;
+	}
+
+	public void setDob(Date dob) {
+		this.dob = dob;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public String getZip() {
+		return zip;
+	}
+
+	public void setZip(String zip) {
+		this.zip = zip;
+	}
+
+	public String getCity() {
+		return city;
+	}
+
+	public void setCity(String city) {
+		this.city = city;
+	}
+
+	public String getCountry() {
+		return country;
+	}
+
+	public void setCountry(String country) {
+		this.country = country;
+	}
+
+	public UserProfile toEntity() {
+		UserProfile userProfileEntity = new UserProfile();
+		userProfileEntity.setProfile_id(this.getProfile_id());
+		userProfileEntity.setUser(this.getUser().toEntity());
+		userProfileEntity.setDob(this.getDob());
+		userProfileEntity.setAddress(this.getAddress());
+		userProfileEntity.setZip(this.getZip());
+		userProfileEntity.setCity(this.getCity());
+		userProfileEntity.setCountry(this.getCountry());
+
+		return userProfileEntity;
+	}
+
+	static public UserProfileModel fromEntity(UserProfile userProfileEntity) {
+		UserProfileModel userProfileModel = new UserProfileModel();
+		userProfileModel.setProfile_id(userProfileEntity.getProfile_id());
+		userProfileModel.setUser(userProfileModel.getUser().fromEntity(userProfileEntity.getUser()));
+		userProfileModel.setDob(userProfileEntity.getDob());
+		userProfileModel.setAddress(userProfileEntity.getAddress());
+		userProfileModel.setZip(userProfileEntity.getZip());
+		userProfileModel.setCity(userProfileEntity.getCity());
+		userProfileModel.setCountry(userProfileEntity.getCountry());
+
+		return userProfileModel;
+	}
+}
+
+
