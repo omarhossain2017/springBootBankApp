@@ -1,0 +1,76 @@
+@Repository(value = "customerDao")
+public class CustomerDAOImpl implements CustomerDAO {
+	@Autowired
+	SessionFactory sessionFactory;
+	// adds a new customer
+	public Integer addCustomer(Customer customer) throws Exception {
+		Session session = sessionFactory.getCurrentSession();
+        CustomerEntity ce = new CustomerEntity();
+        ce.setCustomerId(customer.getCustomerId());
+        ce.setCustomerName(customer.getCustomerName());
+        ce.setDateOfBirth(customer.getDateOfBirth());
+        ce.setAddress(customer.getAddress());
+        ce.setContactNumber(customer.getContactNumber());
+        session.persist(ce);
+        return customer.getCustomerId();
+	}
+}
+
+--------------------------
+
+@Repository(value = "customerDao")
+public class CustomerDAOImpl implements CustomerDAO {
+	@Autowired
+	SessionFactory sessionFactory;
+	// fetches the customer details of a particular customer
+	public Customer getCustomer(Integer customerId) throws Exception {
+		Customer customer = null;
+        Session session = sessionFactory.getCurrentSession();
+        CustomerEntity ce = (CustomerEntity) session.get(CustomerEntity.class,customerId);
+        if (ce != null) {
+            customer = new Customer();
+            customer.setCustomerId(ce.getCustomerId());
+            customer.setCustomerName(ce.getCustomerName());
+            customer.setDateOfBirth(ce.getDateOfBirth());
+            customer.setAddress(ce.getAddress());
+            customer.setContactNumber(ce.getContactNumber());
+        }
+        return customer;
+}
+
+
+
+
+-------------------------------------------------------------------------------
+
+@Repository(value = "customerDao")
+public class CustomerDAOImpl implements CustomerDAO {
+    @Autowired
+    SessionFactory sessionFactory;
+    //updates the address and contactNumber of a particular customer
+    public void updateCustomer(Customer customer) throws Exception {
+       Session session = sessionFactory.getCurrentSession();
+        CustomerEntity ce = (CustomerEntity) session.get(CustomerEntity.class,
+                customer.getCustomerId());
+        if (ce != null) {
+            ce.setAddress(customer.getAddress());
+            ce.setContactNumber(customer.getContactNumber());
+        }         
+    }
+}
+
+
+-------------------------------------------------------------------------
+
+
+@Repository(value = "customerDao")
+public class CustomerDAOImpl implements CustomerDAO {
+    @Autowired
+    SessionFactory sessionFactory;
+    // deletes the given customer
+    public void deleteCustomer(Integer id) throws Exception {
+        Session session = sessionFactory.getCurrentSession();
+        CustomerEntity customerEntity = session.get(CustomerEntity.class, id);
+        session.delete(customerEntity);
+    }
+}
